@@ -1,0 +1,44 @@
+db.rentals_with_payments.aggregate([
+  // Stage 1: $group - Group by customer_id and calculate total spending
+  {
+    $group: {
+      _id: "$customer_id", // Group by Customer ID
+      // Calculate total spending by summing the amounts in the embedded 'payments' array
+      total_spent: { $sum: { $sum: "$payments.amount" } }, 
+      total_rentals: { $sum: 1 } // Count the total number of rentals
+    }
+  },
+
+  // Stage 2: $lookup - Join with the 'customer' collection to retrieve customer names
+  {
+    $lookup: {
+      from: "customer",
+      localField: "_id",
+      foreignField: "customer_id",
+      as: "customer_details"
+    }
+  },
+  { $unwind: "$customer_details" }, // Deconstruct the customer_details array
+
+  // Stage 3: $sort - Sort by total_spent in descending order (highest spender first)
+  {
+    $sort: {
+      total_spent: -1
+    }
+  },
+
+  // Stage 4: $limit - Select the top 10 customers
+  {
+    $limit: 10
+  },
+
+  // Stage 5: $project - Reshape the document for final reporting
+  {
+    $project: {
+      _id: 0, // Exclude the MongoDB ObjectId
+      customer_name: { $concat: ["$customer_details.first_name", " ", "$customer_details.last_name"] }, // Concatenate first and last name
+      total_spent: 1,
+      total_rentals: 1
+    }
+  }
+]);

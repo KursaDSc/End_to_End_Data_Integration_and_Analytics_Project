@@ -1,0 +1,35 @@
+db.rentals_with_payments.aggregate([
+  // Stage 1: $project - Extract required fields and convert the date string to a Date type
+  {
+    $project: {
+      _id: 0,
+      // ERROR FIX: Convert the rental_date string field to BSON Date type using $toDate
+      converted_rental_date: { $toDate: "$rental_date" },
+      // Calculate the total payment by summing the amounts in the embedded 'payments' array
+      total_payment: { $sum: "$payments.amount" }
+    }
+  },
+
+  // Stage 2: $project - Extract the Year and Month information from the converted date field
+  {
+    $project: {
+      // Format the date into YYYY-MM string for grouping
+      rental_month_year: { $dateToString: { format: "%Y-%m", date: "$converted_rental_date" } },
+      total_payment: 1
+    }
+  },
+  
+  // Stage 3: $group - Group documents by Month and Year
+  {
+    $group: {
+      _id: "$rental_month_year",
+      total_monthly_revenue: { $sum: "$total_payment" }, // Calculate the sum of revenue for the month
+      total_rentals: { $sum: 1 } // Count the number of rentals (transactions) in this month
+    }
+  },
+  
+  // Stage 4: $sort - Sort the results chronologically
+  {
+    $sort: { _id: 1 } // Sort by the YYYY-MM grouping field in ascending order
+  }
+]);

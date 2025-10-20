@@ -1,0 +1,32 @@
+db.customers_with_summary.aggregate([
+  // Stage 1: $match - Filter for customers with more than 1 rental (optional)
+  {
+    $match: {
+      total_rentals: { $gt: 1 } // Select customers who have rented strictly more than once
+    }
+  },
+  
+  // Stage 2: $sort - Sort by 'total_rentals' in descending order
+  {
+    $sort: {
+      total_rentals: -1 // Highest rental count first
+    }
+  },
+  
+  // Stage 3: $limit - Select the top 10 customers
+  {
+    $limit: 10
+  },
+  
+  // Stage 4: $project - Reshape the document and select fields for reporting
+  {
+    $project: {
+      _id: 0, // Exclude the MongoDB ObjectId
+      customer_name: { $concat: ["$first_name", " ", "$last_name"] }, // Concatenate customer names
+      email: 1,
+      store_id: 1,
+      total_rentals: 1,
+      first_rental_date: 1
+    }
+  }
+]);

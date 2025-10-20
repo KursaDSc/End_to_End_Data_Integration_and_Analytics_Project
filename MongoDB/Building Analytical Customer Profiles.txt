@@ -1,0 +1,42 @@
+[
+    // Stage 1: $lookup - Temporarily joins rental history to each customer document.
+    {
+        '$lookup': {
+            'from': 'rental',           // Source collection containing the activity records.
+            'localField': 'customer_id',  // Joining field from the input documents (customer).
+            'foreignField': 'customer_id',// Joining field from the source collection (rental).
+            'as': 'rentals'               // Temporary array field holding all matched rental documents.
+        }
+    }, 
+    
+    // Stage 2: $project - Calculates summary metrics and reshapes the output document.
+    {
+        '$project': {
+            '_id': 1,                     // Keep the original MongoDB ID.
+            'customer_id': 1,             // Keep customer identifiers.
+            'first_name': 1, 
+            'last_name': 1, 
+            'email': 1, 
+            'store_id': 1, 
+            
+            // Analytical Metric 1: Calculates the total number of rentals (size of the temporary 'rentals' array).
+            'total_rentals': {
+                '$size': '$rentals'
+            }, 
+            
+            // Analytical Metric 2: Finds the earliest rental date among all associated rentals.
+            'first_rental_date': {
+                '$min': '$rentals.rental_date'
+            }
+            // The temporary 'rentals' array is implicitly dropped here.
+        }
+    }, 
+    
+    // Stage 3: $out - Writes the final, summarized profiles to a new collection.
+    {
+        '$out': {
+            'db': 'sakila_db',             // Target database name.
+            'coll': 'customers_with_summary' // The name of the new analytical collection.
+        }
+    }
+]

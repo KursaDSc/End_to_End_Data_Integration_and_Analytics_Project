@@ -1,0 +1,19 @@
+[
+    // Stage 1: $lookup - Embeds the payment documents into the rental documents.
+    {
+        '$lookup': {
+            'from': 'payment',           // Source collection to embed (e.g., the "dimension").
+            'localField': 'rental_id',   // Joining field from the input documents (rental).
+            'foreignField': 'rental_id', // Joining field from the source collection (payment).
+            'as': 'payments'             // The name of the new array field containing the embedded documents.
+        }
+    }, 
+    
+    // Stage 2: $out - Writes the final result to a new collection.
+    {
+        '$out': {
+            'db': 'sakila_db',           // Target database name. Required for explicit output handling.
+            'coll': 'rentals_with_payments' // The name of the new denormalized collection.
+        }
+    }
+]
